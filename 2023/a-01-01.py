@@ -4,10 +4,10 @@ def get_first_digit(line):
             return int(char)
 
 
-calibration_number = 0
 with open('z-01-01-input.txt', 'r') as f:
     lines = f.readlines()
 
+calibration_number = 0
 for line in lines:
     a = get_first_digit(line)
     b = get_first_digit(line[::-1])

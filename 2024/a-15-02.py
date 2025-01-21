@@ -54,9 +54,8 @@ class Box:
             return self.left.look_ahead(direction, field)
 
 
-
 class Field:
-    def __init__(self, input_filename) -> None:
+    def __init__(self, input_filename, verbose=False) -> None:
         ''' in this task, every x value is twice as wide! '''
         with open(input_filename, 'r') as f:
             lines = f.readlines()
@@ -67,6 +66,10 @@ class Field:
         for y, line in enumerate(lines):
             for x, s in enumerate(line):
                 self.add_tile(y,2*x,s)
+        self.verbose = verbose
+
+        if self.verbose:
+            print(f'Created Field object!')
 
     def __repr__(self) -> str:
         data = [['.' for i in range(self.Nx)] for j in range(self.Ny)]
@@ -92,39 +95,38 @@ class Field:
 
     def execute_instructions(self) -> None:
         for move in self.instructions:
-            # print(move)
             self.apply(move)
-            # print(self)
+            if self.verbose == True:
+                print(self)
 
-    def move_north(self) -> list[tuple[int]]:
-        return [(i, self.robot.x) for i in range(self.robot.y-1,-1,-1)]
+    def tile_north(self) -> tuple[int]:
+        return (self.robot.y-1, self.robot.x)
 
-    def move_east(self) -> None:
-        return [(self.robot.y, i) for i in range(self.robot.x+1,self.Nx+1,1)]
+    def tile_east(self) -> None:
+        return (self.robot.y, self.robot.x+1)
 
-    def move_south(self) -> None:
-        return [(i, self.robot.x) for i in range(self.robot.y+1,self.Ny+1,1)]
+    def tile_south(self) -> None:
+        return (self.robot.y+1, self.robot.x)
 
-    def move_west(self) -> None:
-        return [(self.robot.y, i) for i in range(self.robot.x-1,-1,-1)]
+    def tile_west(self) -> None:
+        return (self.robot.y, self.robot.x-1)
 
     def apply(self, move):
         match move:
             case '^':
-                ray = self.move_north()
+                next_tile = self.tile_north()
             case '>':
-                ray = self.move_east()
+                next_tile = self.tile_east()
             case 'v':
-                ray = self.move_south()
+                next_tile = self.tile_south()
             case '<':
-                ray = self.move_west()
+                next_tile = self.tile_west()
             case _:
                 return
 
-        next_tile = ray[0]
-        # move robot and boxes
         if self.is_barrier[next_tile]:
             return
+        # check what's on next positions in front of affected boxes
         no_box = True
         for b in self.boxes:
             if next_tile in b.both_positions():
@@ -136,42 +138,14 @@ class Field:
             return
 
         tiles_ahead = box_to_move.look_ahead(move, self)
-        # print(tiles_ahead)
         if any([t == 'barrier' for t in tiles_ahead.values()]):
             return
 
         self.robot.set_position(next_tile)
         box_to_move.push(move)
-        boxes_to_move = set([])
-        for tile_position, obj in tiles_ahead.items():
-            if isinstance(obj, Box):
-                boxes_to_move.add(obj)
+        boxes_to_move = set([obj for obj in tiles_ahead.values() if isinstance(obj, Box)])
         for box in boxes_to_move:
             box.push(move)
-        return
-        
-        boxes_to_move = set([])
-        box_to_move = None
-        for counter, tile_position in enumerate(ray):
-            box_present = False
-            for b in self.boxes:
-                if tile_position in b.both_positions():
-                    box_to_move = b
-                    box_present = True
-                    break
-            if self.is_barrier[tile_position]: # cannot move
-            # if tile.position in self.barriers: # cannot move
-                return
-            elif box_present:
-                boxes_to_move.add(box_to_move)
-            else: # empty
-                break
-
-        self.robot.set_position(ray[0])
-        # current value of counter is where the first box goes
-        if counter > 0:
-            for b in boxes_to_move:
-                b.push(move)
 
     def sum_gps(self) -> int:
         counter = 0
@@ -186,8 +160,8 @@ if __name__ == '__main__':
     # input_filename = 'z-15-03-small.txt'
     # input_filename = 'z-15-04-another-one.txt'
     field = Field(input_filename)
-    print(field)
+    # print(field)
     field.execute_instructions()
-    print(field.sum_gps())
+    print(f'The sum of final GPS coordinates is {field.sum_gps()}.')
 
 

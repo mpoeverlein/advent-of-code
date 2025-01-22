@@ -1,15 +1,7 @@
 from itertools import product
 
-def read_data(f) -> list[list[int],list[list[int]]]:
-    with open(f, 'r') as ff:
-        lines = ff.readlines()
-    result_list, element_list = [], []
-    for line in lines:
-        result, elements = line.split(':')
-        result_list.append(int(result))
-        element_list.append([int(i) for i in elements.split()])
-
-    return [result_list, element_list]
+import importlib
+day_07_01 = importlib.import_module('a-07-01')
 
 def calculate(elements, operators):
     result = elements[0]
@@ -23,29 +15,36 @@ def calculate(elements, operators):
 
     return result
 
-# def turn_binary_number_to_operator_string(decimal_number):
-#     return f'{decimal_number:
+def obtain_calibration_result(results: list[int], elements_list: list[list[int]]) -> int:
+    '''
+    Find out which equations are possible by testing all possible combinations of addition and multiplication and concatenation.
+    Sum up the possible results.
 
-f = 'z-07-01-input.txt'
-# f = 'z-07-02-actual-example.txt'
-results, elements_list = read_data(f)
-print(results)
+    Parameters
+    ----------
+    result_list: list[int]
+    element_list: list[list[int]]
 
-calibration_result = 0
+    Returns
+    -------
+    calibration_result: int
+    '''
+    calibration_result = 0
 
-for result, elements in zip(results, elements_list):
-    N = len(elements) - 1
-    for operators in product('+*|', repeat=N):
-        # print(operators)
-        if result == calculate(elements, operators):
-            print(elements, operators)
-            calibration_result += result
-            break
-    # for i in range(2**N):
-    #     operators = f'{i:b}'.zfill(N).replace('0','+').replace('1','*')
-    #     if result == calculate(elements, operators):
-    #         calibration_result += result
-    #         break
+    for result, elements in zip(results, elements_list):
+        N = len(elements) - 1
+        for operators in product('+*|', repeat=N):
+            if result == calculate(elements, operators):
+                calibration_result += result
+                break
 
-print(calibration_result)
+    return calibration_result
+
+
+if __name__ == '__main__':
+    f = 'z-07-01-input.txt'
+    # f = 'z-07-02-actual-example.txt'
+    results, elements_list = day_07_01.read_data(f)
+    calibration_result = obtain_calibration_result(results, elements_list)
+    print(f'The calibration result is {calibration_result}.')
 

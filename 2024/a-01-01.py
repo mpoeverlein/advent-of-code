@@ -61,4 +61,4 @@ if __name__ == '__main__':
     test_compute_distance()
     input_filename = 'z-01-01-input.txt'
     left_list, right_list = read_data(input_filename)
-    print(compute_distance(left_list, right_list))
+    print(f'The distance is {compute_distance(left_list, right_list)}.')

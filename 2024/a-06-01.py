@@ -108,8 +108,6 @@ def propagate_field(field: FieldData) -> FieldData:
     field: FieldData
     '''
     y, x, direction = get_guard_state(field)
-    if direction == '':
-        return field
     ys, xs = position_in_front_of_guard(field, y, x, direction)
     try:
         in_front = field[ys][xs]

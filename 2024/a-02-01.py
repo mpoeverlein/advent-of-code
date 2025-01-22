@@ -4,7 +4,7 @@
 We identify which sequences are always increasing by 1,2 or 3.
 '''
 
-from helpers import read_data_as_list_list_int
+from helpers import read_data_as_list_list
 
 def check_increasing(levels: list[int]) -> bool:
     '''
@@ -45,6 +45,6 @@ def check_all(levels_list: list[list[int]]) -> int:
 
 if __name__ == '__main__':
     input_filename = 'z-02-01-input.txt'
-    levels_list = read_data_as_list_list_int(input_filename)
+    levels_list = read_data_as_list_list(input_filename, datatype=int)
     n_safe= check_all(levels_list)
     print(f'The number of safe sequences is: {n_safe}.')

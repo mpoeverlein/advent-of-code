@@ -14,9 +14,9 @@ def read_data_as_list_strings(input_filename: str) -> list[str]:
         lines = f.readlines()
     return lines
 
-def read_data_as_list_list_int(input_filename: str) -> list[list[int]]:
+def read_data_as_list_list(input_filename: str, datatype: type, separator: str='') -> list[list[int]]:
     '''
-    Return contents of <input_filename> as list of list of integers
+    Return contents of <input_filename> as list of list of <datatype>
     Parameters
     ----------
     input_filename: str
@@ -24,17 +24,24 @@ def read_data_as_list_list_int(input_filename: str) -> list[list[int]]:
 
     Returns
     -------
-    levels_list: list[list[int]]
+    data_list: list[list[datatype, e.g., str or int]]
 
     '''
     with open(input_filename, 'r') as f:
         lines = f.readlines()
 
-    levels_list = []
-    for line in lines:
-        levels_list.append([int(s) for s in line.split()])
+    data_list = []
+    if separator == '':
+        for line in lines:
+            data_list.append([datatype(s) for s in line.split()])
+    elif separator == 'None':
+        for line in lines:
+            data_list.append([datatype(s) for s in line])
+    else:
+        for line in lines:
+            data_list.append([datatype(s) for s in line.split(separator)])
 
-    return levels_list
+    return data_list
 
 FieldData = list[list]
 PositionData = tuple[int]

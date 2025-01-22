@@ -1,5 +1,13 @@
 class Position:
-    def __init__(self, y: int, x: int):
+    def __init__(self, y: int, x: int) -> None:
+        '''
+        Create Position object from y,x data.
+
+        Parameters
+        ----------
+        y, x: int, int
+          positions
+        '''
         self.y, self.x = y, x
         self.position = (y,x)
 
@@ -10,11 +18,20 @@ class Position:
         y,x = position
         self.y, self.x = y, x
         self.position = (y,x)
+
     def __repr__(self) -> str:
         return f'Position ({self.y}, {self.x})'
 
 class Field:
-    def __init__(self, input_filename) -> None:
+    def __init__(self, input_filename: str, debug: bool=False) -> None:
+        '''
+        Create Field object from data in input file.
+
+        Parameters
+        ----------
+        input_filename: str
+        debug: bool
+        '''
         with open(input_filename, 'r') as f:
             lines = f.readlines()
         the_field, self.instructions = ''.join(lines).split('\n\n')
@@ -23,6 +40,7 @@ class Field:
             for x, s in enumerate(line):
                 self.add_tile(y,x,s)
         self.Ny, self.Nx = y, x
+        self.debug = debug
 
     def __repr__(self) -> str:
         data = [['.' for i in range(self.Nx+1)] for j in range(self.Ny+1)]
@@ -34,33 +52,80 @@ class Field:
         return '\n'.join([''.join(s) for s in data])
 
     def add_tile(self, y: int, x: int, s: str) -> None:
+        '''
+        Add tile on (y,x) with symbol s to internal data (either self.robot, self.barriers or self.boxes)
+
+        Parameters
+        ----------
+        y, x: int, int
+          positions
+        symbol: str
+          #, O, ., @
+        '''
         match s:
-            case '@':
-                self.robot = Position(y,x)
             case '#':
                 self.barriers.append((y,x))
             case 'O':
                 self.boxes.append((y,x))
+            case '@':
+                self.robot = Position(y,x)
 
     def execute_instructions(self) -> None:
+        '''
+        Apply all moves stored in self.instructions.
+        '''
         for move in self.instructions:
-            print(move)
             self.apply(move)
-            print(self)
+            if self.debug:
+                print(move)
+                print(self)
 
-    def move_north(self) -> None:
+    def move_north(self) -> list[Position]:
+        '''
+        Returns
+        -------
+        position_list: list[Position]
+          list of all positions north of robot
+        '''
+
         return [Position(i, self.robot.x) for i in range(self.robot.y-1,-1,-1)]
 
-    def move_east(self) -> None:
+    def move_east(self) -> list[Position]:
+        '''
+        Returns
+        -------
+        position_list: list[Position]
+          list of all positions east of robot
+        '''
         return [Position(self.robot.y, i) for i in range(self.robot.x+1,self.Nx+1,1)]
 
-    def move_south(self) -> None:
+    def move_south(self) -> list[Position]:
+        '''
+        Returns
+        -------
+        position_list: list[Position]
+          list of all positions south of robot
+        '''
         return [Position(i, self.robot.x) for i in range(self.robot.y+1,self.Ny+1,1)]
 
-    def move_west(self) -> None:
+    def move_west(self) -> list[Position]:
+        '''
+        Returns
+        -------
+        position_list: list[Position]
+          list of all positions west of robot
+        '''
         return [Position(self.robot.y, i) for i in range(self.robot.x-1,-1,-1)]
 
-    def apply(self, move):
+    def apply(self, move: str) -> None:
+        '''
+        Apply <move> to move robot and maybe boxes
+
+        Parameters
+        ----------
+        move: str
+          Either '^', '>', 'v' or '<'
+        '''
         match move:
             case '^':
                 ray = self.move_north()
@@ -89,6 +154,13 @@ class Field:
             self.boxes.append(ray[counter].position)
 
     def sum_gps(self) -> int:
+        '''
+        Calculate sum of all box positions
+
+        Returns
+        -------
+        counter: int
+        '''
         counter = 0
         for box in self.boxes:
             counter += box[0] * 100 + box[1]
@@ -100,8 +172,8 @@ if __name__ == '__main__':
     # input_filename = 'z-15-02-actual-example.txt'
     # input_filename = 'z-15-03-small.txt'
     field = Field(input_filename)
-    print(field)
     field.execute_instructions()
-    print(field.sum_gps())
+    gps_sum = field.sum_gps()
+    print(f'The GPS sum is {gps_sum}.')
 
 

@@ -1,0 +1,10 @@
+ab-cd
+ab-ef
+ab-gh
+ab-ij
+cd-ef
+cd-gh
+cd-ij
+ef-gh
+ef-ij
+gh-ij

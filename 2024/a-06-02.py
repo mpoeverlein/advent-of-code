@@ -1,6 +1,7 @@
 from copy import deepcopy
 '''
 This implementation is faster since we instantly teleport the guard to the next position.
+It is still quite slow, though.
 '''
 
 import importlib
@@ -15,7 +16,7 @@ def next_tiles_in_front_of_guard(field: FieldData, y: int, x: int, direction: st
         case '^': return [(yi, x, field[yi][x]) for yi in range(y-1,-1,-1)]
         case '>': return [(y, xi, field[y][xi]) for xi in range(x+1,len(field[0]))]
         case 'v': return [(yi, x, field[yi][x]) for yi in range(y+1,len(field))]
-        case '<': return [(y, xi, field[y][xi]) for yi in range(x-1,-1,-1)]
+        case '<': return [(y, xi, field[y][xi]) for xi in range(x-1,-1,-1)]
 
 def propagate_field(field: FieldData) -> FieldData:
     ''' Advance field state by as many steps as possible
@@ -30,7 +31,6 @@ def propagate_field(field: FieldData) -> FieldData:
     '''
     y, x, direction = day_06_01.get_guard_state(field)
     next_tiles = next_tiles_in_front_of_guard(field, y, x, direction)
-    print(next_tiles)
     next_tiles_symbols = [item[2] for item in next_tiles]
     if blockade == next_tiles_symbols[0]:
         field[y][x] = day_06_01.get_new_direction(direction, blockade)
@@ -60,14 +60,16 @@ def make_trajectory(field: FieldData, debug: bool=False) -> Trajectory:
     '''
 
     y, x, symbol = day_06_01.get_guard_state(field)
-    guard_trajectory = [(x,y,symbol)]
+    guard_trajectory = [(y,x,symbol)]
     while True:
         if debug:
             print('Next step started.')
-        field = propagate_field(field)
+        field, new_trajectory_points = propagate_field(field)
+        for trajectory_point in new_trajectory_points:
+            guard_trajectory.append(trajectory_point)
         y, x, symbol = day_06_01.get_guard_state(field)
         if symbol == '': break
-        guard_trajectory.append((x,y,symbol))
+        guard_trajectory.append((y,x,symbol))
 
     return guard_trajectory
 
@@ -87,15 +89,14 @@ def find_all_possible_obstacles(original_field: FieldData, guard_trajectory: Tra
     int
     '''
     actual_field = deepcopy(original_field)
-    day_06_01.print_field(actual_field)
     initial_y, initial_x, initial_symbol = day_06_01.get_guard_state(actual_field)
     count_obstacles = 0
     unique_guard_positions = []
     for (y,x,symbol) in guard_trajectory:
         if (y,x) not in unique_guard_positions:
             unique_guard_positions.append((y,x))
-    for (test_y,test_x) in unique_guard_positions:
-        print(f'Test next position ({test_y,test_x}).')
+    for c, (test_y,test_x) in enumerate(unique_guard_positions):
+        print(f'Test next position ({test_y,test_x}). Check no. {c} of {len(unique_guard_positions)}.')
         test_field = deepcopy(original_field)
         test_field[test_y][test_x] = '#'
 
@@ -104,7 +105,7 @@ def find_all_possible_obstacles(original_field: FieldData, guard_trajectory: Tra
             test_field[initial_y][initial_x] = initial_symbol
         test_trajectory = [(initial_y, initial_x, initial_symbol)]
         while True:
-            test_field = propagate_field(test_field)
+            test_field, test_trajectory_part = propagate_field(test_field)
             y, x, symbol = day_06_01.get_guard_state(test_field)
             if symbol == '':
                 break
@@ -113,7 +114,8 @@ def find_all_possible_obstacles(original_field: FieldData, guard_trajectory: Tra
                 test_field[test_y][test_x] = 'O'
                 break
 
-            test_trajectory.append((y,x,symbol))
+            for trajectory_part in test_trajectory_part:
+                test_trajectory.append(trajectory_part)
 
     return count_obstacles
 

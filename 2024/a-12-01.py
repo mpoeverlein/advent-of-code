@@ -7,6 +7,9 @@ from helpers import Field, Position
 
 class FenceField(Field):
     def assign_regions(self) -> None:
+        '''
+        Create FenceField.region_dict, which has the positions in the field as keys and the region ID as values.
+        '''
         self.region_dict = {k: -1 for k in self.position_list}
         current_region = 0
         while len(self.fields_with_undetermined_region()) > 0:
@@ -18,6 +21,16 @@ class FenceField(Field):
         self.n_regions = current_region
 
     def assign_all_neighbors(self, test_field: Position, current_region: int) -> None:
+        '''
+        For a given test_field, assign all neighbors with same value to the same region (current_region).
+
+        Parameters
+        ----------
+        test_field: Position
+          position of which neighbors to check
+        current_region: int
+          id value of this region
+        '''
         possible_tests = self.get_neighbors(test_field)
         while len(possible_tests) > 0:
             current_test = possible_tests.pop()
@@ -29,15 +42,48 @@ class FenceField(Field):
                     possible_tests.append(item)
 
     def get_fields_of_region(self, region: int) -> list[Position]:
+        '''
+        Return all positions belonging to a region with id <region>.
+
+        Parameters
+        ----------
+        region: int
+          The region for which to get the positions
+
+        Returns
+        position_list: list[Position]
+        '''
         return [Position(*k) for k,v in self.region_dict.items() if v == region]
 
     def create_masked_field(self, mask: list[Position]) -> FieldData:
+        '''
+        Create field where all positions given by <mask> are marked by '.'
+
+        Parameters
+        ----------
+        mask: list[Position]
+
+        Returns
+        -------
+        masked_data: FieldData
+        '''
         masked_data = deepcopy(self.field)
         for position in mask:
             masked_data[position.y][position.x] = '.'
         return masked_data
 
     def create_masked_region(self, region: int) -> FieldData:
+        '''
+        Create field where all positions not belonging to region with id <region> are marked by '.'
+
+        Parameters
+        ----------
+        region: int
+
+        Returns
+        -------
+        masked_data: FieldData
+        '''
         actual_data = deepcopy(self.field)
         masked_data = deepcopy(self.field)
         for y, line in enumerate(masked_data):
@@ -50,6 +96,13 @@ class FenceField(Field):
         return masked_data
 
     def fields_with_undetermined_region(self) -> list[Position]:
+        '''
+        Return all positions not belonging to any regions so far.
+
+        Returns
+        -------
+        list[Position]
+        '''
         return [Position(*k) for k,v in self.region_dict.items() if v == -1]
 
     @staticmethod
@@ -64,9 +117,11 @@ class FenceField(Field):
     def show_regions(self) -> None:
         for i in range(self.n_regions):
             masked_data = self.create_masked_region(i)
-            print(self.print_data(masked_data))
 
     def get_areas(self):
+        '''
+        Calculate area of each region and store in self.areas, which is list[int]
+        '''
         self.areas = []
         for i in range(self.n_regions):
             masked_data = self.create_masked_region(i)
@@ -74,23 +129,14 @@ class FenceField(Field):
             self.areas.append(area)
 
     def get_fence_lengths(self):
+        '''
+        Calculate fence length of each region and store in self.fence_lengths, which is list[int]
+        '''
         self.fence_lengths = []
         for i in range(self.n_regions):
             masked_data = self.create_masked_region(i)
             length = self.get_one_fence(masked_data)
-            print(length)
             self.fence_lengths.append(length)
-
-    def count_sides(self):
-        self.sides = []
-        for i in range(self.n_regions):
-            masked_data = self.create_masked_region(i)
-            side = self.get_side_one_region(masked_data)
-            print(side)
-            self.sides.append(side)
-
-    def get_side_one_region(self, data: FieldData) -> int:
-        return 0
 
     @staticmethod
     def count_occurrence(data: FieldData) -> int:
@@ -112,7 +158,7 @@ class FenceField(Field):
             if line[-1] != '.': counter += 1
 
         # count North to South
-        data = self.transpose(data)
+        data = self.transpose(data) # use this transpose such that the code above can be re-used
         for y, line in enumerate(data):
             if line[0] != '.': counter += 1
             for x0, x1 in zip(line,line[1:]):
@@ -136,23 +182,12 @@ class FenceField(Field):
             price += area * length
         return price
 
-    def discount_price(self) -> int:
-        price = 0
-        for area, side in zip(self.areas, self.sides):
-            price += area * side
-        return price
-
-
 if __name__ == '__main__':
     input_filename = 'z-12-02-actual-example.txt'
-    # input_filename = 'z-12-01-input.txt'
+    input_filename = 'z-12-01-input.txt'
     fence_field = FenceField(input_filename)
-    print(fence_field)
-    # masked_data = fence_field.create_masked_field([Position(0,0)])
-    # print(masked_data)
     fence_field.assign_regions()
-    fence_field.show_regions()
     fence_field.get_areas()
     fence_field.get_fence_lengths()
-    print(fence_field.total_price())
-    print(fence_field.discount_price())
+    total_price = fence_field.total_price()
+    print(f'The total price for the fence is {total_price}.')

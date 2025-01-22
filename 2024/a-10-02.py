@@ -1,10 +1,25 @@
 FieldData = list[list]
 PositionData = tuple[int]
 
+import importlib
+day_10_01 = importlib.import_module('a-10-01')
 from helpers import Field, Position
 
-class TrailField(Field):
+class TrailField(day_10_01.TrailField):
     def find_trails_one_start(self, trailhead: Position) -> list[list[Position]]:
+        '''
+        Find all *distinct* trails starting at one position.
+
+        Parameters
+        ----------
+        trailhead: Position
+          The position at which to check as the start
+
+        Returns
+        -------
+        trail: list[list[Position]]
+          list of possible trails
+        '''
         trail = [[trailhead]]
         goal_value = 1
         while goal_value < 10:
@@ -15,9 +30,6 @@ class TrailField(Field):
                         new_list.append(neighbor_position)
 
             new_new_list = new_list[:]
-            # for item in new_list:
-            #     if item in new_new_list: continue
-            #     new_new_list.append(item)
 
             if len(new_list) == 0:
                 break
@@ -26,28 +38,13 @@ class TrailField(Field):
 
         return trail
 
-    def find_all_trailheads(self):
-        trailheads = []
-        for (y,x), d in self.linearized:
-            if d == 0:
-                trailheads.append(Position(y,x))
-        self.trailheads = trailheads
-
-    def find_all_trails(self) -> list[int]:
-        scores = []
-        for p in self.trailheads:
-            trails = self.find_trails_one_start(p)
-        return [len(self.find_trails_one_start(p)[-1]) for p in self.trailheads]
 
 
 if __name__ == '__main__':
     input_filename = 'z-10-02-actual-example.txt'
     input_filename = 'z-10-01-input.txt'
     field = TrailField(input_filename, datatype=int)
-    # field = read_data(input_filename)
-    print(field)
-    print(field.find_trails_one_start(Position(0,2)))
     field.find_all_trailheads()
-    print(field.find_all_trails())
-    print(sum(field.find_all_trails()))
+    rating_sum = sum(field.find_all_trails())
+    print(f'The sum of all ratings is {rating_sum}.')
 

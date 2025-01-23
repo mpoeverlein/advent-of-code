@@ -16,6 +16,37 @@ def bxl(literal_operand, reg_b): return literal_operand ^ reg_b
 def bst(translated_combo): return translated_combo % 8
 def bxc(reg_b, reg_c): return reg_b ^ reg_c
 
+def run(reg_a, reg_b, reg_c, instructions) -> str:
+    outs = []
+    instruction_pointer = 0
+    while instruction_pointer < len(instructions):
+        current_instruction = instructions[instruction_pointer]
+        literal_operand = instructions[instruction_pointer+1]
+        translated_combo = translate_combo(literal_operand, reg_a, reg_b, reg_c)
+
+        match current_instruction:
+            case 0:
+                reg_a = int(adv(reg_a, translated_combo))
+            case 1:
+                reg_b = bxl(literal_operand, reg_b)
+            case 2:
+                reg_b = bst(translated_combo)
+            case 3:
+                if reg_a != 0:
+                    instruction_pointer = literal_operand - 2 # to undo the final incrementation
+            case 4:
+                reg_b = bxc(reg_b, reg_c)
+            case 5:
+                outs.append(bst(translated_combo))
+            case 6:
+                reg_b = int(adv(reg_a, translated_combo))
+            case 7:
+                reg_c = int(adv(reg_a, translated_combo))
+
+        instruction_pointer += 2
+
+    return ','.join([str(s) for s in outs])
+
 if __name__ == '__main__':
     input_filename = 'z-17-02-actual-example.txt'
     input_filename = 'z-17-01-input.txt'

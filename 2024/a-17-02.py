@@ -1,3 +1,93 @@
+'''
+The instruction string for today's problem translates into the following instructions:
+
+    2,4     bst A       A mod 8 -> B
+    1,3     bxl 3       B XOR 3 -> B
+    7,5     cdv B       floor(A/2**B) -> C
+    0,3     adv 3       A / 2**3 -> A
+    1,5     bxl 5       B XOR 5 -> B
+    4,1     bxc 1       B XOR C -> B
+    5,5     out B       print(B % 8)
+    5,0     jnz 0       jump to instruction zero if A is non-zero
+
+Since register B and register C are initialized again in each loop,
+the printed value of B%8 does not depend on the register A value of the previous iteration.
+As a consequence, the final output only depends on the most significant octal digit.
+Therefore, the solution can be found by searching for numbers that result in exact matches for
+the ending of the instruction string.
+'''
+
+import importlib
+day_17_01 = importlib.import_module('a-17-01')
+
+def hardcoded_run(reg_a: int, reg_b: int, reg_c: int) -> str:
+    '''
+    I translated the instruction string by hand to have it in explicit form.
+
+    Parameters
+    ----------
+    reg_a: int
+      Value in register A.
+
+    Returns
+    -------
+    outs: str
+      concatenated values in register B (modulo 8)
+    '''
+    outs = ''
+    jump = True
+    while jump:
+        # 2,4: bst A
+        reg_b = reg_a % 8
+        # 1,3: bxl 3
+        reg_b ^= 3
+        # 7,5: cdv B
+        reg_c = reg_a >> reg_b
+        # 0,3: adv 3
+        reg_a = reg_a >> 3
+        # 1,5: bxl 5
+        reg_b ^= 5
+        # 4,1: bxc 1
+        reg_b ^= reg_c
+        # 5,5: out B
+        outs += f'{reg_b % 8},'
+        # 3,0: jnz 0
+        if reg_a == 0:
+            jump = False
+    return outs
+
+def find_last_digit(reg_b: int, reg_c: int, instructions: list[int], previous_list: list[int]) -> list[int]:
+    '''
+    The last digit is independent from all other digits
+    '''
+    new_list = []
+    instructions_string = ','.join([str(s) for s in instructions])
+    for previous in previous_list:
+        for i in range(8):
+            reg_a = previous*8 + i
+            outs = day_17_01.run(reg_a, reg_b, reg_c, instructions)
+            if instructions_string.endswith(outs):
+                new_list.append(reg_a)
+    return new_list
+
+def find_all_digits(reg_b, reg_c, instructions) -> int:
+    previous_list = [0]
+    for i in range(len(instructions)):
+        previous_list = find_last_digit(reg_b, reg_c, instructions, previous_list)
+
+    return min(previous_list)
+
+if __name__ == '__main__':
+    input_filename = 'z-17-02-actual-example.txt'
+    # input_filename = 'z-17-03-short-example.txt'
+    input_filename = 'z-17-01-input.txt'
+    reg_a, reg_b, reg_c, instructions = day_17_01.read_data(input_filename)
+    minimum_value = find_all_digits(reg_b, reg_c, instructions)
+    print(f'The minimum number to give back the instructions string is {minimum_value}.')
+
+
+    exit()
+
 def read_data(input_filename: str) -> list[int,list[int]]:
     with open(input_filename, 'r') as f:
         lines = f.readlines()
@@ -125,55 +215,11 @@ if __name__ == '__main__':
     input_filename = 'z-17-02-actual-example.txt'
     # input_filename = 'z-17-03-short-example.txt'
     input_filename = 'z-17-01-input.txt'
-    reg_a, reg_b, reg_c, instructions = read_data(input_filename)
+    reg_a, reg_b, reg_c, instructions = day_17_01.read_data(input_filename)
+    print(run(reg_a, reg_b, reg_c, instructions))
+    previous_list = [0]
     print(instructions)
-    instructions_string = ','.join([str(s) for s in instructions])
-    previous = find_all_starting_n_item(reg_b, reg_c, instructions_string, n=1)
-    print([f'{s:o}' for s in previous])
-    for n in range(2,len(instructions)+1):
-        next_ = find_next_number(reg_b, reg_c, instructions_string, previous, n=n)
-        print([f'{s:o}' for s in next_])
-        previous = next_
-        break
-    # for i in range(1,6):
-    #     solutions = find_all_starting_n_item(reg_b, reg_c, instructions_string, n=i)
-    #     print([f'{s:o}' for s in solutions])
-    # jsolutions = find_all_starting_with_first_item(reg_b, reg_c, instructions_string)
-    # jprint([f'{s:o}' for s in solutions])
-    # jsolutions = find_all_starting_with_first_second_item(reg_b, reg_c, instructions_string)
-    # jprint([f'{s:o}' for s in solutions])
-    # jsolutions = find_all_starting_with_third_item(reg_b, reg_c, instructions_string)
-    # jprint([f'{s:o}' for s in solutions])
-    exit()
-    # brute force find correct way. works only for small example ... 
-    reg_a = 0
-    # reg_a = translate_solution(instructions_string)
-    # find first 4 digits by brute force
-    # solutions = [[]]
-    for i in range(8**5,8**8):
-        reg_a = i
-        outs = run(reg_a, reg_b, reg_c, instructions)
-        if outs.startswith(make_instructions_string(instructions, n_items=4)):
-            four_digit_solution = reg_a % (8**4)
-            break
+    for i in range(len(instructions)):
+        previous_list = find_last_digit(reg_b, reg_c, instructions, previous_list)
 
-    print(reg_a, four_digit_solution, f'{reg_a:o}')
-    print(reg_a, f'{reg_a:b}', f'{reg_a:o}', outs, binary_representation(outs), translate_solution(outs), f'{four_digit_solution:b}')
-    # solutions.append([])
-
-    # find next 4 digits
-    for i in range(1,8**7):
-        reg_a = four_digit_solution + i * 8**4
-        print(f'{four_digit_solution:b}')
-        print(f'{reg_a:b}')
-        print(f'{four_digit_solution:o}')
-        print(f'{reg_a:o}')
-        outs = run(i, reg_b, reg_c, instructions)
-        if outs.startswith(make_instructions_string(instructions, n_items=8)):
-            eight_digit_solution = reg_a % (8**8)
-            break
-
-    # print(solutions)
-    print(reg_a, eight_digit_solution, f'{reg_a:o}')
-    print(reg_a, f'{reg_a:b}', f'{reg_a:o}', outs, binary_representation(outs), translate_solution(outs), f'{eight_digit_solution:b}')
-    exit()
+    print(previous_list)

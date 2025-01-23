@@ -15,50 +15,33 @@ the printed value of B%8 does not depend on the register A value of the previous
 As a consequence, the final output only depends on the most significant octal digit.
 Therefore, the solution can be found by searching for numbers that result in exact matches for
 the ending of the instruction string.
+
+Example with fake numbers:
+Number              Output
+5                   0
+54                  2,0
+547                 3,2,0
+5472                6,3,2,0
+etc.
 '''
 
 import importlib
 day_17_01 = importlib.import_module('a-17-01')
 
-def hardcoded_run(reg_a: int, reg_b: int, reg_c: int) -> str:
-    '''
-    I translated the instruction string by hand to have it in explicit form.
-
-    Parameters
-    ----------
-    reg_a: int
-      Value in register A.
-
-    Returns
-    -------
-    outs: str
-      concatenated values in register B (modulo 8)
-    '''
-    outs = ''
-    jump = True
-    while jump:
-        # 2,4: bst A
-        reg_b = reg_a % 8
-        # 1,3: bxl 3
-        reg_b ^= 3
-        # 7,5: cdv B
-        reg_c = reg_a >> reg_b
-        # 0,3: adv 3
-        reg_a = reg_a >> 3
-        # 1,5: bxl 5
-        reg_b ^= 5
-        # 4,1: bxc 1
-        reg_b ^= reg_c
-        # 5,5: out B
-        outs += f'{reg_b % 8},'
-        # 3,0: jnz 0
-        if reg_a == 0:
-            jump = False
-    return outs
-
 def find_last_digit(reg_b: int, reg_c: int, instructions: list[int], previous_list: list[int]) -> list[int]:
     '''
     The last digit is independent from all other digits
+    Parameters
+    ----------
+    reg_b, reg_c: int, int
+    instructions: list[int]
+    previous_list: list[int]
+      These numbers gave the correct result in the previous round of the instructions.
+
+    Returns
+    -------
+    new_list: list[int]
+      These numbers give the correct result and can be used to find the subsequent octal digit.
     '''
     new_list = []
     instructions_string = ','.join([str(s) for s in instructions])
@@ -70,7 +53,20 @@ def find_last_digit(reg_b: int, reg_c: int, instructions: list[int], previous_li
                 new_list.append(reg_a)
     return new_list
 
-def find_all_digits(reg_b, reg_c, instructions) -> int:
+def find_all_digits(reg_b: int, reg_c: int, instructions: list[int]) -> int:
+    '''
+    Find the smallest number which returns the instructions string when put into register A.
+
+    Parameters
+    ----------
+    reg_b, reg_c: int, int
+    instructions: list[int]
+
+    Returns
+    -------
+    minimum_number: int
+    '''
+
     previous_list = [0]
     for i in range(len(instructions)):
         previous_list = find_last_digit(reg_b, reg_c, instructions, previous_list)
@@ -79,147 +75,8 @@ def find_all_digits(reg_b, reg_c, instructions) -> int:
 
 if __name__ == '__main__':
     input_filename = 'z-17-02-actual-example.txt'
-    # input_filename = 'z-17-03-short-example.txt'
     input_filename = 'z-17-01-input.txt'
     reg_a, reg_b, reg_c, instructions = day_17_01.read_data(input_filename)
     minimum_value = find_all_digits(reg_b, reg_c, instructions)
     print(f'The minimum number to give back the instructions string is {minimum_value}.')
 
-
-    exit()
-
-def read_data(input_filename: str) -> list[int,list[int]]:
-    with open(input_filename, 'r') as f:
-        lines = f.readlines()
-    reg_a, reg_b, reg_c = [int(s.split()[-1]) for s in lines[:3]]
-    s = lines[-1].split()[1]
-    instructions = [int(ss) for ss in s.split(',')]
-
-    return [reg_a, reg_b, reg_c, instructions]
-
-def translate_combo(literal_operand, reg_a, reg_b, reg_c):
-    combos = [0, 1, 2, 3, reg_a, reg_b, reg_c, None]
-    return combos[literal_operand]
-
-def binary_representation(outs):
-    sum_ = 0
-    for c,i in enumerate(outs.split(',')):
-        sum_ += int(i) * 8 ** c
-    return f'{sum_:b}'
-
-def adv(reg_a, translated_combo): return reg_a / 2**translated_combo
-def bxl(literal_operand, reg_b): return literal_operand ^ reg_b
-def bst(translated_combo): return translated_combo % 8
-def bxc(reg_b, reg_c): return reg_b ^ reg_c
-
-def run(reg_a, reg_b, reg_c, instructions) -> str:
-    outs = []
-    instruction_pointer = 0
-    while instruction_pointer < len(instructions):
-        current_instruction = instructions[instruction_pointer]
-        literal_operand = instructions[instruction_pointer+1]
-        translated_combo = translate_combo(literal_operand, reg_a, reg_b, reg_c)
-
-        match current_instruction:
-            case 0:
-                reg_a = int(adv(reg_a, translated_combo))
-            case 1:
-                reg_b = bxl(literal_operand, reg_b)
-            case 2:
-                reg_b = bst(translated_combo)
-            case 3:
-                if reg_a != 0:
-                    instruction_pointer = literal_operand - 2 # to undo the final incrementation
-            case 4:
-                reg_b = bxc(reg_b, reg_c)
-            case 5:
-                outs.append(bst(translated_combo))
-            case 6:
-                reg_b = int(adv(reg_a, translated_combo))
-            case 7:
-                reg_c = int(adv(reg_a, translated_combo))
-
-        instruction_pointer += 2
-
-    return ','.join([str(s) for s in outs])
-
-def translate_solution(instructions_string):
-    mappings = [6, 7, 4, 5, -1, 2, 3, 1]
-    exponent = 1
-    the_number = 0
-    for a in instructions_string.split(',')[::]:
-        mapped = mappings[int(a)]
-        the_number += mapped * exponent
-        exponent *= 8
-
-    return the_number
-
-def make_instructions_string(instructions, n_items=1):
-    return ','.join([str(s) for s in instructions[:n_items]])
-
-def find_all_starting_with_first_item(reg_b, reg_c, instructions_string):
-    solutions = []
-    for i in range(1,8**6):
-        reg_a = i
-        outs = run(reg_a, reg_b, reg_c, instructions)
-        if outs.startswith(make_instructions_string(instructions, n_items=1)):
-            # print(f'{reg_a:30b}', f'{reg_a:30o}')
-            solutions.append(reg_a)
-    return set([s%8 for s in solutions])
-
-def find_all_starting_with_first_second_item(reg_b, reg_c, instructions_string):
-    solutions = []
-    for i in range(1,8**6):
-        reg_a = i
-        outs = run(reg_a, reg_b, reg_c, instructions)
-        if outs.startswith(make_instructions_string(instructions, n_items=2)):
-            # print(f'{reg_a:30b}', f'{reg_a:30o}')
-            solutions.append(reg_a)
-    return set([s%(8**2) for s in solutions])
-
-def find_all_starting_with_third_item(reg_b, reg_c, instructions_string):
-    solutions = []
-    for i in range(1,8**6):
-        reg_a = i
-        outs = run(reg_a, reg_b, reg_c, instructions)
-        if outs.startswith(make_instructions_string(instructions, n_items=3)):
-            # print(f'{reg_a:30b}', f'{reg_a:30o}')
-            solutions.append(reg_a)
-    return set([s%(8**3) for s in solutions])
-
-def find_all_starting_n_item(reg_b, reg_c, instructions_string, n=1):
-    solutions = []
-    for i in range(1,8**6):
-        reg_a = i
-        outs = run(reg_a, reg_b, reg_c, instructions)
-        if outs.startswith(make_instructions_string(instructions, n_items=n)):
-            # print(f'{reg_a:30b}', f'{reg_a:30o}')
-            solutions.append(reg_a)
-    return set([s%(8**n) for s in solutions])
-
-def find_next_number(reg_b, reg_c, instructions_string, previous, n):
-    solutions = []
-    for i in previous:
-        for j in range(1,8):
-            reg_a = i + j*8**(n-1)
-            print(f'{reg_a:o}')
-            outs = run(reg_a, reg_b, reg_c, instructions)
-            if outs.startswith(make_instructions_string(instructions, n_items=n)):
-                solutions.append(reg_a)
-
-    return set([s%(8**n) for s in solutions])
-
-
-
-if __name__ == '__main__':
-    input_filename = 'z-17-02-actual-example.txt'
-    # input_filename = 'z-17-03-short-example.txt'
-    input_filename = 'z-17-01-input.txt'
-    reg_a, reg_b, reg_c, instructions = day_17_01.read_data(input_filename)
-    print(run(reg_a, reg_b, reg_c, instructions))
-    previous_list = [0]
-    print(instructions)
-    for i in range(len(instructions)):
-        previous_list = find_last_digit(reg_b, reg_c, instructions, previous_list)
-
-    print(previous_list)

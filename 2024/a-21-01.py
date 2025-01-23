@@ -1,66 +1,62 @@
 from helpers import Position
 from copy import deepcopy
+import itertools as it
+
+movement_dictionary = {'^': (-1, 0), '>': (0, 1), 'v': (1, 0), '<': (0, -1)}
+
+def determine_moves_to_do(dy: int, dx: int) -> str:
+    moves_to_do = ''
+    if dy > 0:
+        moves_to_do += dy * 'v'
+    elif dy < 0:
+        moves_to_do += abs(dy) * '^'
+
+    if dx > 0:
+        moves_to_do += dx * '>'
+    elif dx < 0:
+        moves_to_do += abs(dx) * '<'
+
+    return moves_to_do
+
+def all_permutations(moves_to_do: str) -> list[str]:
+    sequences_to_check = set([])
+    for sequence in it.permutations(moves_to_do):
+        sequences_to_check.add(sequence)
+
+    return list(sequences_to_check)
 
 class DirectionPadB:
     def __init__(self):
         self.buttons = {
             # key: (y pos, x pos)
-            'A': (0,2),
-            '^': (0,1),
+                        '^': (0,1), 'A': (0,2),
             '<': (1,0), 'v': (1,1), '>': (1,2)
             }
-        self.movement_dict = {'^': (-1, 0), '>': (0, 1), 'v': (1, 0), '<': (-1, 0)}
+        self.movement_dict = {'^': (-1, 0), '>': (0, 1), 'v': (1, 0), '<': (0, -1)}
         self.position = Position(*self.buttons['A'])
-        self.values = {v: k for k,v in self.buttons.items()}
+        self.values = {Position(*v): k for k,v in self.buttons.items()}
 
-    def execute(self, keystrokes) -> str:
-        self.result = ''
-        for key in keystrokes:
-            self.result += self.move(key)
-        return self.result
+    def is_valid(self, start: str, sequence: str) -> bool:
+        self.position = Position(*self.buttons[start])
+        for move in sequence:
+            self.position += movement_dictionary[move]
+            if self.position not in self.values:
+                return False
 
-    def movement_cost(self, movement: str) -> int|str:
-        assert movement[-1] == 'A', f'Final button has to be "A"! Current movement: {movement}'
-        test_position = deepcopy(self.position)
-        for move in movement[:-1]:
-            test_position += self.movement_dict[move]
-            if test_position.position_tuple not in self.buttons.values():
-                return 'inf'
-        return len(movement)
+        return True
 
-    def test_movement_cost(self) -> None:
-        for move in ['>', '^', 'v', '<', '<<v', 'v<v', 'v<<']:
-            print(move, self.movement_cost(move+'A'))
+class DirectionPadA(DirectionPadB):
+    def is_valid(self, start: str, sequence: str) -> bool:
+        self.position = Position(*self.buttons[start])
+        for move in sequence:
+            self.position += movement_dictionary[move]
+            if self.position not in self.values:
+                return False
 
-dpb = DirectionPadB()
-dpb.test_movement_cost()
-# print(dpb.movement_cost('>'))
-exit()
-
-
-class DirectionPadA:
-    def __init__(self):
-        self.buttons = {
-            # key: (y pos, x pos)
-            'A': (0,2),
-            '^': (0,1),
-            '<': (1,0), 'v': (1,1), '>': (1,2)
-            }
-        self.position = self.buttons['A']
-        self.values = {v: k for k,v in self.buttons.items()}
-
-    def execute(self, keystrokes) -> str:
-        self.result = ''
-        for key in keystrokes:
-            self.result += self.move(key)
-        return self.result
-
-    def move_cost(self, move: str) -> int:
-        movement = self.translate(move)
-        
+        return True
 
 class NumPad:
-    def __init__(self, direction_pad_a: DirectionPadA):
+    def __init__(self):
         self.buttons = {
             # key: (y pos, x pos)
             'A': (3,2),
@@ -69,151 +65,85 @@ class NumPad:
         self.buttons.update({str(i+4): (1,i) for i in range(3)})
         self.buttons.update({str(i+7): (0,i) for i in range(3)})
         self.position = self.buttons['A']
-        self.values = {v: k for k,v in self.buttons.items()}
-        self.dpa = direction_pad_a
+        self.values = {Position(*v): k for k,v in self.buttons.items()}
 
-    def move_cost(self, movement: str) -> int:
-        cost = 0
-        for move in movement:
-            cost += self.dpa.move_cost(move)
-        return cost
+    def is_valid(self, start: str, sequence: str) -> bool:
+        self.position = Position(*self.buttons[start])
+        for move in sequence:
+            self.position += movement_dictionary[move]
+            if self.position not in self.values:
+                return False
 
-    def move(self, key) -> list[int]:
-        ''' the tile in the bottom left is unused and has to be avoided '''
+        return True
 
-        new_position = self.buttons[key]
-        dy = new_position[0] - self.position[0]
-        dx = new_position[1] - self.position[1]
-        # print(key,new_position, self.position)
-        # exit()
+def find_shortest_sequence_numpad(sequence: str) -> str:
+    ''' Returns sequence in Dpad B language '''
+    shortest_sequence = find_shortest_sequence_numpad_one_step('A', sequence[0])
+    for a,b in zip(sequence, sequence[1:]):
+        shortest_sequence += find_shortest_sequence_numpad_one_step(a,b)
+    return shortest_sequence
 
-        result = ''
-        # comparing with the given example shows that the numpad <<^^A is shorter than ^^<<A to go from A to 7.
-        if self.position in ['0', 'A']:
-            if dx <= 0 and dy <= 0:
-                result += abs(dy) * '^' + abs(dx) * '<'
-            elif dx >= 0 and dy >= 0:
-                result += abs(dx) * '>' + abs(dy) * 'v'
-            elif dx <= 0 and dy >= 0:
-                result += abs(dy) * 'v' + abs(dx) * '<'
-            elif dx >= 0 and dy <= 0:
-                result += abs(dx) * '>' + abs(dy) * '^'
-        else:
-            if dx <= 0 and dy <= 0:
-                result += abs(dx) * '<' + abs(dy) * '^'
-            elif dx >= 0 and dy >= 0:
-                result += abs(dx) * '>' + abs(dy) * 'v'
-            elif dx <= 0 and dy >= 0:
-                result += abs(dy) * 'v' + abs(dx) * '<'
-            elif dx >= 0 and dy <= 0:
-                result += abs(dx) * '>' + abs(dy) * '^'
+def find_shortest_sequence_numpad_one_step(start: str, end: str) -> str:
+    dy = NumPad().buttons[end][0] - NumPad().buttons[start][0]
+    dx = NumPad().buttons[end][1] - NumPad().buttons[start][1]
+    moves_to_do = determine_moves_to_do(dy, dx)
 
-        self.position = new_position
-        return result + 'A'
+    possible_sequences = []
+    for sequence in all_permutations(moves_to_do):
+        if not NumPad().is_valid(start, ''.join(sequence)):
+            continue
+        possible_sequences.append(find_shortest_sequence_dpad_a(''.join(sequence)+'A'))
 
-    def execute(self, keystrokes) -> str:
-        result = ''
-        for key in keystrokes:
-            result += self.move(key)
-        return result
+    return min(possible_sequences, key=lambda item: len(item))
 
-class DirectionPad:
-    def __init__(self):
-        self.buttons = {
-            # key: (y pos, x pos)
-            'A': (0,2),
-            '^': (0,1),
-            '<': (1,0), 'v': (1,1), '>': (1,2)
-            }
-        self.position = self.buttons['A']
-        self.values = {v: k for k,v in self.buttons.items()}
+def find_shortest_sequence_dpad_a(sequence: str) -> str:
+    shortest_sequence = find_shortest_sequence_dpad_a_one_step('A', sequence[0])
+    for a,b in zip(sequence, sequence[1:]):
+        shortest_sequence += find_shortest_sequence_dpad_a_one_step(a,b)
+    return shortest_sequence
 
-    def move(self, key) -> str:
-        ''' the tile in the top left is unused and has to be avoided '''
+def find_shortest_sequence_dpad_a_one_step(start: str, end: str) -> str:
+    dy = DirectionPadA().buttons[end][0] - DirectionPadA().buttons[start][0]
+    dx = DirectionPadA().buttons[end][1] - DirectionPadA().buttons[start][1]
+    moves_to_do = determine_moves_to_do(dy, dx)
 
-        new_position = self.buttons[key]
-        dy = new_position[0] - self.position[0]
-        dx = new_position[1] - self.position[1]
-        self.position = new_position
+    possible_sequences = []
+    for sequence in all_permutations(moves_to_do):
+        if not DirectionPadA().is_valid(start, ''.join(sequence)):
+            continue
+        possible_sequences.append(find_shortest_sequence_dpad_b(''.join(sequence)+'A'))
 
-        result = ''
-        if dx <= 0 and dy <= 0:
-            result += abs(dy) * '^' + abs(dx) * '<'
-        elif dx >= 0 and dy >= 0:
-            result += abs(dx) * '>' + abs(dy) * 'v'
-        elif dx <= 0 and dy >= 0:
-            result += abs(dy) * 'v' + abs(dx) * '<'
-        elif dx >= 0 and dy <= 0:
-            result += abs(dx) * '>' + abs(dy) * '^'
+    return min(possible_sequences, key=lambda item: len(item))
 
-        return result + 'A'
+def find_shortest_sequence_dpad_b(sequence: str) -> str:
+    shortest_sequence = find_shortest_sequence_dpad_b_one_step('A', sequence[0])
+    for a,b in zip(sequence, sequence[1:]):
+        shortest_sequence += find_shortest_sequence_dpad_b_one_step(a,b)
+    return shortest_sequence
 
-    def execute(self, keystrokes) -> str:
-        result = ''
-        for key in keystrokes:
-            result += self.move(key)
-        return result
-
-    def translate(self, instructions) -> str:
-        result = ''
-        for instruction in instructions:
-            print(instruction, '\t', result, '\t', self.position)
-            match instruction:
-                case 'A':
-                    result += self.values[self.position]
-                    dy, dx = 0, 0
-                case '^':
-                    dy, dx = -1, 0
-                case '>':
-                    dy, dx = 0, 1
-                case 'v':
-                    dy, dx = 1, 0
-                case '<':
-                    dy, dx = 0, -1
-            self.position = (self.position[0]+dy, self.position[1]+dx)
-        return result
-
-
-def make_sequence(input_sequence: str) -> str:
-    numpad = NumPad()
-    direction_pad_a = DirectionPad()
-    direction_pad_b = DirectionPad()
-    direction_a_instructions = numpad.execute(input_sequence)
-    print(direction_a_instructions)
-    direction_b_instructions = direction_pad_a.execute(direction_a_instructions)
-    print(direction_b_instructions)
-
-    return direction_pad_b.execute(direction_b_instructions)
-
-def test_dpad() -> None:
-    buttons = ['A', '^', '>', 'v', '<']
-    for b in buttons:
-        for bb in buttons:
-            dp = DirectionPad()
-            dp.position = dp.buttons[b]
-            move = dp.move(bb)
-            print(f'{b} -> {bb}: {move}')
-
-    # test solution
-    dp = DirectionPad()
-    test = dp.translate('<v<A>>^AvA^A<vA<AA>>^AAvA<^A>AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A')
-    print(dp.translate(test))
-    # print(dp.translate('<vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A'))
+def find_shortest_sequence_dpad_b_one_step(start: str, end: str) -> str:
+    dy = DirectionPadB().buttons[end][0] - DirectionPadB().buttons[start][0]
+    dx = DirectionPadB().buttons[end][1] - DirectionPadB().buttons[start][1]
+    moves_to_do = determine_moves_to_do(dy, dx)
+    for sequence in all_permutations(moves_to_do):
+        if not DirectionPadB().is_valid(start, ''.join(sequence)):
+            continue
+        return ''.join(sequence) + 'A'
 
 
 if __name__ == '__main__':
+    numpad = NumPad()
+    print(find_shortest_sequence_dpad_b_one_step('A', '<'))
+    print(find_shortest_sequence_dpad_b_one_step('<', 'A'))
+    print(find_shortest_sequence_dpad_a_one_step('A', '^'))
+    print(find_shortest_sequence_numpad_one_step('A', '3'))
+    print(find_shortest_sequence_numpad_one_step('3', '7'))
+    print(len(find_shortest_sequence_numpad('379A')))
     input_sequences = ['029A', '980A', '179A', '456A', '379A',]
-#   input_sequences = ['964A', '140A', '413A', '670A', '593A' ]
-    # input_sequences = ['379A']
+    input_sequences = ['964A', '140A', '413A', '670A', '593A' ]
     total = 0
     for i in input_sequences:
-        o = make_sequence(i)
+        o = find_shortest_sequence_numpad(i)
         print(o, len(o), int(i.replace('A','')))
         total += int(i.replace('A','')) * len(o)
     print(total)
-#     # 202612 is too high
-# 
-# # current wrong
-# #              X X
-# 'v<<A>>^AvA^Av<<A>>^AAv<A<A>>^AAvAA^<A>Av<A>^AA<A>Av<A<A>>^AAAvA^<A>A 68 379'
-# '<v<A>>^AvA^A<v A<  AA>>^AAvA<^A>AAvA^ A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A     64 379'

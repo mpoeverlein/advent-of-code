@@ -6,22 +6,66 @@ class Position:
         self.position = (y,x)
 
     def __eq__(self, a) -> bool:
+        '''
+        Compare two Position objects by comparing their position tuple
+
+        Parameters
+        ----------
+        a: Position
+
+        Returns
+        -------
+        equality: bool
+        '''
         return (self.position == a.position)
 
     def __repr__(self) -> str:
         return f'Position ({self.y}, {self.x})'
 
     def set_position(self, position: tuple[int]) -> None:
+        '''
+        Set position data from a tuple[int].
+
+        Parameters
+        ----------
+        position: tuple[int]
+          new y and x coordinates
+        '''
         y,x = position
         self.y, self.x = y, x
         self.position = (y,x)
 
-    def push(self, direction):
+    def push(self, direction: str) -> None:
+        '''
+        Move position by 1 in indicated direction.
+
+        Parameters
+        ----------
+        direction: str
+          ^ > v >
+        '''
         dy, dx = direction_dict[direction]
         new_y, new_x = self.y+dy, self.x+dx
         self.set_position((new_y, new_x))
 
-    def look_ahead(self, direction: str, field) -> dict:
+    def look_ahead(self, direction: str, field) -> dict[tuple[int],str]:
+        '''
+        Find which tile is in front.
+        If a box is in front, check which tile is in front (recursively!).
+
+        Parameter
+        ---------
+        direction: str
+          ^ > v <
+        field: Field
+          the Field object which holds information about each tile.
+
+        Returns
+        -------
+        output_dictionary: dict[tuple[int],str]
+          Keys: next position (e.g., (3,4))
+          Values: state of next position ('free', 'barrier')
+        '''
         dy, dx = direction_dict[direction]
         next_tile = (self.y+dy, self.x+dx)
         if field.is_barrier[next_tile]:
@@ -35,17 +79,48 @@ class Position:
 
 class Box:
     def __init__(self, position_left: Position, position_right: Position) -> None:
+        '''
+        Initialize box based on left and right position.
+
+        Parameters
+        ----------
+        position_left, position_right: Position, Position
+        '''
         self.left = position_left
         self.right = position_right
 
     def push(self, direction: str) -> None:
+        '''
+        Push left and right part into direction.
+
+        Parameters
+        ----------
+        direction: str
+          ^ > v <
+        '''
         self.left.push(direction)
         self.right.push(direction)
 
     def both_positions(self) -> list[tuple[int]]:
+        '''
+        Return positions of left and right part as a list.
+        '''
         return [self.left.position, self.right.position]
 
-    def look_ahead(self, direction: str, field) -> dict:
+    def look_ahead(self, direction: str, field) -> dict[tuple[int],str]:
+        '''
+        What is the next tile in front of the box?
+
+        Parameters
+        ----------
+        direction: str
+          ^ > v <
+        field: Field
+
+        Returns
+        -------
+        output_dictionary: dict[tuple[int],str]
+        '''
         if direction in ['^', 'v']:
             return self.left.look_ahead(direction, field) | self.right.look_ahead(direction, field)
         elif direction == '>':
@@ -55,8 +130,17 @@ class Box:
 
 
 class Field:
-    def __init__(self, input_filename, verbose=False) -> None:
-        ''' in this task, every x value is twice as wide! '''
+    def __init__(self, input_filename: str, verbose=False: bool) -> None:
+        '''
+        Iinitialize Field object from input file.
+        In this task, every x value is twice as wide!
+
+        Parameters
+        ----------
+        input_filename: str
+        verbose: bool
+          whether to print log info
+        '''
         with open(input_filename, 'r') as f:
             lines = f.readlines()
         the_field, self.instructions = ''.join(lines).split('\n\n')
@@ -82,6 +166,16 @@ class Field:
         return '\n'.join([''.join(s) for s in data])
 
     def add_tile(self, y: int, x: int, s: str) -> None:
+        '''
+        Add tiles to self.robot, self.barriers or self.boxes.
+
+        Parameters
+        ----------
+        y, x: int, int
+          coordinates of tile
+        s: str
+          symbol on this tile
+        '''
         match s:
             case '@':
                 self.robot = Position(y,x)
@@ -94,6 +188,9 @@ class Field:
                 self.boxes.append(Box(Position(y,x), Position(y,x+1)))
 
     def execute_instructions(self) -> None:
+        '''
+        Execute all moves stored in self.instructions.
+        '''
         for move in self.instructions:
             self.apply(move)
             if self.verbose == True:
@@ -111,18 +208,18 @@ class Field:
     def tile_west(self) -> None:
         return (self.robot.y, self.robot.x-1)
 
-    def apply(self, move):
-        match move:
-            case '^':
-                next_tile = self.tile_north()
-            case '>':
-                next_tile = self.tile_east()
-            case 'v':
-                next_tile = self.tile_south()
-            case '<':
-                next_tile = self.tile_west()
-            case _:
-                return
+    def apply(self, move: str) -> None:
+        '''
+        Apply move to robot and potentially boxes
+        '''
+        if move in ['\n']: return
+        move_dictionary = {
+             '^': self.tile_north(),
+             '>': self.tile_east(),
+             'v': self.tile_south(),
+             '<': self.tile_west()
+             }
+        next_tile = move_dictionary[move]
 
         if self.is_barrier[next_tile]:
             return
@@ -163,5 +260,4 @@ if __name__ == '__main__':
     # print(field)
     field.execute_instructions()
     print(f'The sum of final GPS coordinates is {field.sum_gps()}.')
-
 

@@ -53,6 +53,11 @@ class RaceTrack(Field):
         self.lap_set = set(lap) # faster look up
         self.lap_index_dictionary = {v.position_tuple: k for k,v in enumerate(self.lap)} # faster look up for lap index
 
+    def write_lap_to_file(self, output_filename: str) -> None:
+        with open(output_filename, 'w') as o:
+            for k,v in self.lap_index_dictionary.items():
+                o.write(f'{k}: {v}\n')
+
     def get_tiles_perpendicular(self, tile: Position, next_tile: Position) -> list[Position]:
         deltas = [-2, -1, 1, 2] # collisions lifted for up to 2 picoseconds
         dy, dx = tile.difference(next_tile)

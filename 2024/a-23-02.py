@@ -14,7 +14,10 @@ def read_data(input_filename: str) -> dict[str,set[str]]:
         data_dict[b].add(a)
     return data_dict
 
-def get_unique(data_dict: dict[str,set[str]]) -> set[str]:
+def transform_data(input_data: dict[str,set[str]]) -> dict[tuple[str],tuple[str]]:
+    return {tuple([k]): tuple(v) for k,v in input_data.items()}
+
+def get_unique_computers(data_dict: dict[str,set[str]]) -> set[str]:
     unique = set([])
     for k,items in data_dict.items():
         unique.add(k)
@@ -22,49 +25,101 @@ def get_unique(data_dict: dict[str,set[str]]) -> set[str]:
             unique.add(item)
     return unique
 
-
-# def read_data(input_filename: str) -> list[tuple[str]]:
-#     with open(input_filename, 'r') as f:
-#         lines = f.readlines()
-#     connections = []
-#     for line in lines:
-#         a,b = line.strip().split('-')
-#         connections.append((a,b))
-#     return connections
-
-def find_trios(data_dict: dict[str,set[str]]) -> dict[tuple[str],set[str]]:
+def find_trios(data_dict: dict[str,set[str]]) -> dict[tuple[str],tuple[str]]:
     result = []
     for c1,(k1,v1) in enumerate(data_dict.items()):
         for c2,(k2,v2) in enumerate(data_dict.items()):
             if c1 <= c2: continue
             if k1 not in v2: continue
-            result.append([k1,k2,v1&v2])
+            result.append([k1,k2,tuple(v1&v2)])
     new_dict = {(k1,k2): item for k1,k2,item in result}
     return {k: v for k,v in new_dict.items() if len(v) > 0}
 
-def find_quads(connection_dict: dict[str,set[str]], data_dict: dict[set[str], set[str]]) -> dict[tuple[str], set[str]]:
-    result = {}
-    for k,v in data_dict.items():
-        if len(v) < 2: continue
-        for c1,v1 in enumerate(v):
-            print(k,v1)
-            key = k+tuple([v1])
-            result.update({key: set([])})
-            print(result)
-            # exit()
-            for c2,v2 in enumerate(v):
-                # if c1 <= c2: continue
-                if v1 == v2: continue
-                print(v1,v2)
-                if v1 in connection_dict[v2]:
-                    result[key].add(v2)
-                else:
-                    print('NON!')
 
-                    # new_connnections.append([
-            print(result)
+def merge_pairs(connection_dict: dict[str,tuple[str]], data_dict: dict[tuple[str],tuple[str]]) -> dict[tuple[str],tuple[str]]:
+    new_dict = {}
+    connection_set = set([])
+    for pair, connections in data_dict.items():
+        if len(connections) == 0:
+            continue
+        if len(connections) == 1:
+            new_pair = tuple(sorted(list(pair+tuple([connections[0]]))))
+            if new_pair in connection_set:
+                continue
 
-    exit()
+            connection_set.add(new_pair)
+            new_dict.update({new_pair: tuple([])})
+            continue
+
+        for connection in connections:
+            # print(connection)
+            test_connections = list(connections[:])
+            test_connections.remove(connection)
+            if not all([test in connection_dict[connection] for test in test_connections]):
+                continue
+
+            new_pair = tuple(sorted(list(pair+tuple([connection]))))
+            if new_pair in connection_set:
+                continue
+
+            connection_set.add(new_pair)
+
+            new_dict.update({new_pair: tuple(test_connections)})
+
+    return new_dict
+
+
+if __name__ == '__main__':
+    input_filename = 'z-23-03-custom.txt'
+    input_filename = 'z-23-02-actual-example.txt'
+    input_filename = 'z-23-01-input.txt'
+    connection_dict = read_data(input_filename)
+    computers = get_unique_computers(connection_dict)
+    print(computers)
+    print(len(connection_dict))
+    print(connection_dict)
+    print(transform_data(connection_dict))
+    trios = find_trios(connection_dict)
+    merged_connections = deepcopy(trios)
+    for i in range(3,100):
+        print(i)
+        merged_connections = merge_pairs(connection_dict, merged_connections)
+        for k,v in merged_connections.items():
+            if len(v) == 0: print(','.join(k))
+    # print(len(trios))
+    # print(trios)
+    # quads = merge_pairs(connection_dict, trios)
+    # print(quads)
+    # quints = merge_pairs(connection_dict, quads)
+    # print(quints)
+    # sexts = merge_pairs(connection_dict, quints)
+    # print(sexts)
+
+
+exit()
+# def find_quads(connection_dict: dict[str,set[str]], data_dict: dict[set[str], set[str]]) -> dict[tuple[str], set[str]]:
+#     result = {}
+#     for k,v in data_dict.items():
+#         if len(v) < 2: continue
+#         for c1,v1 in enumerate(v):
+#             print(k,v1)
+#             key = k+tuple([v1])
+#             result.update({key: set([])})
+#             print(result)
+#             # exit()
+#             for c2,v2 in enumerate(v):
+#                 # if c1 <= c2: continue
+#                 if v1 == v2: continue
+#                 print(v1,v2)
+#                 if v1 in connection_dict[v2]:
+#                     result[key].add(v2)
+#                 else:
+#                     print('NON!')
+# 
+#                     # new_connnections.append([
+#             print(result)
+# 
+#     exit()
 
 def merge_n_pairs(connection_dict: dict[str,set[str]], data_dict: dict[tuple[str], set[str]]) -> dict[tuple[str], set[str]]:
     N = len(list(data_dict.keys())[0]) # number of connected partners currently identified
@@ -174,6 +229,7 @@ if __name__ == '__main__':
     # input_filename = 'z-23-02-actual-example.txt'
     # input_filename = 'z-23-01-input.txt'
     connection_dict = read_data(input_filename)
+    exit()
     unique = get_unique(connection_dict)
     print(unique)
     print(len(connection_dict))

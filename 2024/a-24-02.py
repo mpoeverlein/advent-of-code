@@ -23,7 +23,7 @@ class Wire:
         if name[1].isdigit() and name[2].isdigit():
             self.add_type_and_index(name[0], int(name[1:]))
     def __repr__(self) -> str:
-        if self.index == -1:
+        if self.index != -1:
             return f'Wire: Name {self.name}, Value {self.value}, Index {self.index}, Type {self.type_name}'
         return f'Wire: Name {self.name}, Value {self.value}'
     def add_type_and_index(self, type_name: str, index: int) -> None:
@@ -41,6 +41,58 @@ class Wire:
         self.index = index
 
 class Circuit(day_24_01.Circuit):
+    def __init__(self, input_filename: str) -> None:
+        with open(input_filename, 'r') as f:
+            lines = f.readlines()
+        start_wires, gates = ''.join(lines).split('\n\n')
+        wire_dict = {}
+        gate_list = []
+
+        for line in start_wires.split('\n'):
+            print(line)
+            wire_name, wire_value = line.split(':')[0], int(line.split(':')[1].strip())
+            wire_dict.update({wire_name: Wire(wire_name, wire_value)})
+        self.wire_dict = wire_dict
+
+        for line in gates.split('\n'):
+            if line.strip() == '': continue
+            in1, gate_type, in2, _, out = line.split()
+            if in1 not in self.wire_dict:
+                self.wire_dict[in1] = Wire(in1, -1)
+            if in2 not in self.wire_dict:
+                self.wire_dict[in2] = Wire(in2, -1)
+            if out not in self.wire_dict:
+                self.wire_dict[out] = Wire(out, -1)
+
+            in1, in2 = sorted([in1,in2])
+            wire_in1 = self.wire_dict.get(in1)
+            wire_in2 = self.wire_dict.get(in2)
+            wire_out = self.wire_dict.get(out)
+            print(wire_in2)
+            gate_list.append(Gate(wire_in1, wire_in2, wire_out, gate_type))
+
+        self.gates = gate_list
+        print(self.gates)
+        print(self.wire_dict)
+
+    def make_translation(self) -> None:
+        for gate in self.gates:
+            if -1 in (gate.in1.index, gate.in2.index):
+                continue
+            in1, in2, out, gate_type_name = gate.in1, gate.in2, gate.out, gate.gate_type_name
+            if (in1.type_name, in2.type_name, gate_type_name) == ('x','y','XOR'):
+                if in1.index == 0:
+                    gate.out.add_type_and_index('z',0)
+                else:
+                    gate.out.add_type_and_index('m',in1.index)
+            elif (in1.type_name, in2.type_name, gate_type_name) == ('x','y','AND'):
+                if in1.index == 0:
+                    gate.out.add_type_and_index('c',0)
+                else:
+                    gate.out.add_type_and_index('n',in1.index)
+        for wire_name, wire in self.wire_dict.items():
+            print(wire)
+
     def find_x_y_wires(self):
         self.x_wires = []
         self.y_wires = []
@@ -118,6 +170,7 @@ if __name__ == '__main__':
     # input_filename = 'z-24-02-actual-example.txt'
     # input_list, wire_list = read_wires(input_filename)
     circuit = Circuit(input_filename)
+    circuit.make_translation()
     # wire_list = sort_wire_list(wire_list)
     # print(wire_list)
     # make_translation(wire_list)

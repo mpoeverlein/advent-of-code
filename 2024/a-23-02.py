@@ -1,31 +1,21 @@
+import importlib
+day_23_01 = importlib.import_module('a-23-01')
 from copy import deepcopy
 
-def read_data(input_filename: str) -> dict[str,set[str]]:
-    with open(input_filename, 'r') as f:
-        lines = f.readlines()
-    data_dict = {}
-    for line in lines:
-        a,b = line.strip().split('-')
-        if a not in data_dict:
-            data_dict[a] = set()
-        data_dict[a].add(b)
-        if b not in data_dict:
-            data_dict[b] = set()
-        data_dict[b].add(a)
-    return data_dict
-
-def transform_data(input_data: dict[str,set[str]]) -> dict[tuple[str],tuple[str]]:
-    return {tuple([k]): tuple(v) for k,v in input_data.items()}
-
-def get_unique_computers(data_dict: dict[str,set[str]]) -> set[str]:
-    unique = set([])
-    for k,items in data_dict.items():
-        unique.add(k)
-        for item in items:
-            unique.add(item)
-    return unique
-
 def find_trios(data_dict: dict[str,set[str]]) -> dict[tuple[str],tuple[str]]:
+    '''
+    Turn connection data into trio data.
+
+    Parameters
+    ----------
+    data_dict: dict[str,set[str]]
+      keys: computer, values: all computers connected to it
+
+    Returns
+    -------
+    new_dict: dict[tuple[str],tuple[str]]
+      keys: a pair of two computers that are connected, values: all computers that are connected to *both* of the computers in key.
+    '''
     result = []
     for c1,(k1,v1) in enumerate(data_dict.items()):
         for c2,(k2,v2) in enumerate(data_dict.items()):
@@ -36,7 +26,21 @@ def find_trios(data_dict: dict[str,set[str]]) -> dict[tuple[str],tuple[str]]:
     return {k: v for k,v in new_dict.items() if len(v) > 0}
 
 
-def merge_pairs(connection_dict: dict[str,tuple[str]], data_dict: dict[tuple[str],tuple[str]]) -> dict[tuple[str],tuple[str]]:
+def merge_pairs(connection_dict: dict[str,set[str]], data_dict: dict[tuple[str],tuple[str]]) -> dict[tuple[str],tuple[str]]:
+    '''
+    Merge data_dict, which has n-tuple keys such that the keys will be (n+1)-tuples
+    Parameters
+    ----------
+    connection_dict: dict[str,set[str]]
+      keys: computer, values: all computers connected to it
+    data_dict: dict[tuple[str],tuple[str]]
+      keys: tuple of n computers, which are all connected to each other
+      values: all computers that are connected to all n computers (except for the ones that are already in the key)
+
+    Returns
+    -------
+    new_dict: dict[tuple[str],tuple[str]]
+    '''
     new_dict = {}
     connection_set = set([])
     for pair, connections in data_dict.items():
@@ -52,7 +56,6 @@ def merge_pairs(connection_dict: dict[str,tuple[str]], data_dict: dict[tuple[str
             continue
 
         for connection in connections:
-            # print(connection)
             test_connections = list(connections[:])
             test_connections.remove(connection)
             if not all([test in connection_dict[connection] for test in test_connections]):
@@ -63,189 +66,41 @@ def merge_pairs(connection_dict: dict[str,tuple[str]], data_dict: dict[tuple[str
                 continue
 
             connection_set.add(new_pair)
-
             new_dict.update({new_pair: tuple(test_connections)})
 
     return new_dict
+
+def find_largest_clique(connection_dict: dict[str,set[str]], n_iterations: int=100) -> str:
+    '''
+    Given connection_dict, find largest clique and return computer names joined by ,
+
+    Parameters
+    ----------
+    connection_dict: dict[str,set[str]]
+    n_iterations: int
+
+    Returns
+    -------
+    computers: str
+    '''
+    trios = find_trios(connection_dict)
+    merged_connections = deepcopy(trios)
+    print('Merging connections! This might take some time...')
+    clique = ''
+    for i in range(n_iterations):
+        print(i)
+        merged_connections = merge_pairs(connection_dict, merged_connections)
+        for k,v in merged_connections.items():
+            if len(v) == 0:
+                clique =','.join(k)
+
+    return clique
 
 
 if __name__ == '__main__':
     input_filename = 'z-23-03-custom.txt'
     input_filename = 'z-23-02-actual-example.txt'
     input_filename = 'z-23-01-input.txt'
-    connection_dict = read_data(input_filename)
-    computers = get_unique_computers(connection_dict)
-    print(computers)
-    print(len(connection_dict))
-    print(connection_dict)
-    print(transform_data(connection_dict))
-    trios = find_trios(connection_dict)
-    merged_connections = deepcopy(trios)
-    for i in range(3,100):
-        print(i)
-        merged_connections = merge_pairs(connection_dict, merged_connections)
-        for k,v in merged_connections.items():
-            if len(v) == 0: print(','.join(k))
-    # print(len(trios))
-    # print(trios)
-    # quads = merge_pairs(connection_dict, trios)
-    # print(quads)
-    # quints = merge_pairs(connection_dict, quads)
-    # print(quints)
-    # sexts = merge_pairs(connection_dict, quints)
-    # print(sexts)
-
-
-exit()
-# def find_quads(connection_dict: dict[str,set[str]], data_dict: dict[set[str], set[str]]) -> dict[tuple[str], set[str]]:
-#     result = {}
-#     for k,v in data_dict.items():
-#         if len(v) < 2: continue
-#         for c1,v1 in enumerate(v):
-#             print(k,v1)
-#             key = k+tuple([v1])
-#             result.update({key: set([])})
-#             print(result)
-#             # exit()
-#             for c2,v2 in enumerate(v):
-#                 # if c1 <= c2: continue
-#                 if v1 == v2: continue
-#                 print(v1,v2)
-#                 if v1 in connection_dict[v2]:
-#                     result[key].add(v2)
-#                 else:
-#                     print('NON!')
-# 
-#                     # new_connnections.append([
-#             print(result)
-# 
-#     exit()
-
-def merge_n_pairs(connection_dict: dict[str,set[str]], data_dict: dict[tuple[str], set[str]]) -> dict[tuple[str], set[str]]:
-    N = len(list(data_dict.keys())[0]) # number of connected partners currently identified
-    result = {}
-    for k,v in data_dict.items():
-        if len(v) < 2: continue
-        for c1,v1 in enumerate(v):
-            print(k,v1)
-            key = k+tuple([v1])
-            result.update({key: set([])})
-            print(result)
-            # exit()
-            for c2,v2 in enumerate(v):
-                # if c1 <= c2: continue
-                if v1 == v2: continue
-                print(v1,v2)
-                if v1 in connection_dict[v2]:
-                    result[key].add(v2)
-                else:
-                    print('NON!')
-
-                    # new_connnections.append([
-            print(result)
-    result = clean_up(result)
-    print(result)
-    return result
-
-def clean_up(result: dict[tuple[str], set[str]]) -> dict[tuple[str], set[str]]:
-    keys = result.keys()
-    keys = [tuple(sorted(list(k))) for k in keys]
-    result = {k: v for k,v in zip(keys, result.values())}
-    return {k: result[k] for k in keys}
-
-
-    for c1,(k1,v1) in enumerate(data_dict.items()):
-        s1 = set(k1)
-        for c2,(k2,v2) in enumerate(data_dict.items()):
-            s2 = set(k2)
-            if c1 <= c2: continue
-            # if k1 not in v2: continue
-            # if len
-            if len(s1 & s2) != 1: continue
-            if len(v1 & v2) == 0: continue
-            result.append([s1|s2,v1&v2])
-    new_dict = {tuple(k): v for k,v in result}
-    return {tuple(k): v for k,v in new_dict.items() if len(v) > 0}
-    # unique_result = []
-    # for r in result:
-    #     r.sort()
-    #     if r not in unique_result:
-    #         unique_result.append(r)
-    # unique_result.sort(key=lambda x: x[2])
-    # unique_result.sort(key=lambda x: x[1])
-    # unique_result.sort(key=lambda x: x[0])
-    # return unique_result
-
-# def merge_n_pairs(pair_list: list[tuple[str]]) -> list[tuple[str]]:
-#     N = len(pair_list[0]) # number of items in a pair
-#     new_list = []
-#     for c1, v1 in enumerate(pair_list):
-#         v1 = set(v1)
-#         for c2, v2 in enumerate(pair_list):
-#             v2 = set(v2)
-#             if c1 <= c2: continue
-#             if len(v1 & v2) == N-1:
-#                 # this_list = []
-#                 new_list.append(list(v1 | v2))
-# 
-#     new_list = [tuple(sorted(i)) for i in new_list]
-#     count_tuples = {}
-#     for tup in new_list:
-#         if tup not in count_tuples:
-#             count_tuples[tup] = 1
-#         else:
-#             count_tuples[tup] += 1
-# 
-#     filtered_new_list = [tup for tup,v in count_tuples.items() if v > 1]
-# 
-#     return filtered_new_list
-
-# def new_find_trios(connections: list[tuple[str]]) -> list[tuple[str]]:
-#     trios = set([])
-#     for ai, tuple_a in enumerate(connections):
-#         va = set(tuple_a)
-#         for bi, tuple_b in enumerate(connections):
-#             if ai <= bi: continue
-#             vb = set(tuple_b)
-#             if len(va & vb) == 1:ZZ
-
-def find_n_pairs(connections: list[tuple[str]]) -> list[tuple[str]]:
-    for c1, v1 in enumerate(pair_list):
-        v1 = set(v1)
-        for c2, v2 in enumerate(pair_list):
-            v2 = set(v2)
-            if c1 <= c2: continue
-            if len(v1 & v2) == N-1:
-                combined_list = list(v1 | v2)
-                pair_list = remove_combined(pair_list, combined_list)
-                new_list.append(combined_list)
-
-def remove_combined(pair_list, combined_list) -> list[tuple[str]]:
-    pass
-
-
-if __name__ == '__main__':
-    input_filename = 'z-23-03-custom.txt'
-    # input_filename = 'z-23-02-actual-example.txt'
-    # input_filename = 'z-23-01-input.txt'
-    connection_dict = read_data(input_filename)
-    exit()
-    unique = get_unique(connection_dict)
-    print(unique)
-    print(len(connection_dict))
-    print(connection_dict)
-    trios = find_trios(connection_dict)
-    print(len(trios))
-    print(trios)
-    quads = merge_n_pairs(connection_dict, trios)
-    # jprint(quads)
-    # exit()
-    # tmp_list = find_trios(d)
-    # quads = merge_n_pairs(trios)
-    tmp_list = deepcopy(quads)
-    while len(tmp_list) > 1:
-        print(len(tmp_list))
-        tmp_list = merge_n_pairs(connection_dict, tmp_list)
-    # max_pair = find_largest_n_pair(d)
-    print(tmp_list)
-    print(','.join(tmp_list[0]))
+    connection_dict = day_23_01.read_data(input_filename)
+    clique = find_largest_clique(connection_dict)
+    print(f'The largest clique is {clique}.')

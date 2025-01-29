@@ -123,9 +123,9 @@ class Maze(Field):
             for traj in trajectories:
                 if traj.position.data() == self.end.data():
                     goal_trajectories.append(traj)
-                    print('FOUND ONE!!!')
+                    print('Found a trajectory leading to the goal.')
                     continue
-                new_moves = self.add_moves(traj)
+                new_moves = self.add_moves(traj) # this returns [traj] if no valid move
                 if len(new_moves) == 1 and new_moves[0] == traj:
                     continue
                 for n in new_moves:
@@ -138,7 +138,7 @@ class Maze(Field):
 
         self.trajectories = goal_trajectories
 
-    def clean_trajectories(self, trajectories) -> list[Trajectory]:
+    def clean_trajectories(self, trajectories: list[Trajectory]) -> list[Trajectory]:
         '''
         From trajectories for a given current position and current position,
         keep only the trajectory with the lowest cost.
@@ -152,7 +152,6 @@ class Maze(Field):
         cleaned_trajectories: list[Trajectory]
         '''
 
-        new_trajs = []
         new_traj_dict = {} # keys are: (pos_y, pos_x, direction)
         for traj in trajectories:
             test_key = (traj.position.y, traj.position.x, traj.direction)

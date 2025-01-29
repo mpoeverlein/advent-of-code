@@ -2,7 +2,15 @@ from helpers import Position, Field
 PositionData = tuple[int]
 
 class RaceTrack(Field):
+    '''
+    This object stores on which tiles the track is and on which tiles the barriers are (plus start and end)
+    '''
     def __init__(self, input_filename: str) -> None:
+        '''
+        Parameters
+        ----------
+        input_filename: str
+        '''
         with open(input_filename, 'r') as f:
             lines = f.readlines()
         lines = [line.strip() for line in lines]
@@ -19,6 +27,15 @@ class RaceTrack(Field):
         self.free_one_d = [a.one_d_pos for a in self.free_fields]
 
     def add_field(self, y: int, x: int, s: str) -> None:
+        '''
+        Add information about field at position (y,x) containing symbol s
+        Parameters
+        ----------
+        y,x: int, int
+          position on grid
+        s: symbol
+          #,.,S,E
+        '''
         match s:
             case '#':
                 barrier = Position(y,x)
@@ -54,28 +71,40 @@ class RaceTrack(Field):
         self.lap_index_dictionary = {v.position_tuple: k for k,v in enumerate(self.lap)} # faster look up for lap index
 
     def write_lap_to_file(self, output_filename: str) -> None:
+        '''
+        Write out lap for later use.
+
+        Parameters
+        ----------
+        output_filename: str
+        '''
         with open(output_filename, 'w') as o:
             for k,v in self.lap_index_dictionary.items():
                 o.write(f'{k}: {v}\n')
 
-    def get_tiles_perpendicular(self, tile: Position, next_tile: Position) -> list[Position]:
-        deltas = [-2, -1, 1, 2] # collisions lifted for up to 2 picoseconds
-        dy, dx = tile.difference(next_tile)
-        if abs(dy) == 1:
-            return [tile+(0,d) for d in deltas] # note the swap in x/y!
-        elif abs(dx) == 1:
-            return [tile+(d,0) for d in deltas] # note the swap in x/y!
-
     def get_neighboring_tiles(self, tile: Position) -> list[Position]:
+        '''
+        Get all tiles that are 2 steps away from current tile.
+
+        Parameters
+        ----------
+        tile: Position
+
+        Returns
+        -------
+        neighboring_tiles: list[Position]
+        '''
         dy_list = [-2, -1, -1, -1, 0, 0, 0, 0, 1, 1, 1, 2]
         dx_list = [ 0, -1,  0,  1,-2,-1, 1, 2,-1, 0, 1, 0]
         return [tile+(y,x) for y,x in zip(dy_list, dx_list)]
 
     def find_shortcuts(self) -> None:
+        '''
+        Store savings from shortcuts in self.savings.
+        '''
         print('Finding all shortcuts...')
         all_shortcut_savings = []
         for tile, next_tile in zip(self.lap[:-1], self.lap[1:]): # finish line not needed
-            tiles_to_check = self.get_tiles_perpendicular(tile, next_tile)
             tiles_to_check = self.get_neighboring_tiles(tile)
             for tile_to_check in tiles_to_check:
                 if tile_to_check not in self.lap_set:
@@ -87,6 +116,13 @@ class RaceTrack(Field):
         self.savings = all_shortcut_savings
 
     def histogram(self) -> dict[int,int]:
+        '''
+        Bin self.savings.
+
+        Returns
+        -------
+        histogram: dict[int,int]
+        '''
         histogram_dict = {}
         for saving in self.savings:
             if saving in histogram_dict:
@@ -98,6 +134,13 @@ class RaceTrack(Field):
         return histogram_dict
 
     def shortcut_sum(self) -> int:
+        '''
+        Sum up all savings at least 100 picoseconds.
+
+        Returns
+        -------
+        total: int
+        '''
         total = 0
         for saving, count in self.histogram().items():
             if saving < 100:

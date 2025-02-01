@@ -1,108 +1,85 @@
 #!/usr/bin/env python3
 
-def read_data(input_filename: str) -> list[list[str]]:
-    with open(input_filename, 'r') as f:
-        content = ''.join(f.readlines())
+'''
+Since the actual input data has so many possible arrangements, it is impossible to list them all individually.
+Instead, we keep only track of the number of possibilities.
+This is done by taking the target string and checking if any of the building blocks fit.
+If a block fits, the remainder of the test string is added to the data.
+This can be done recursively until only the empty string remains.
+Example:
+    blocks: r, wr, b, g, bwu, rb, gb, br
 
-    building_blocks, target = content.split('\n\n')
-    building_blocks = building_blocks.split(', ')
-    target = target.split('\n')
+    target: gbbr
+    -> 'bbr': 1 (possibility for g), 'br': 1 (possibility for gb)
+    -> 'br': 2 (possibilities for gb (line above) and g,b)
+    -> 'r': 2 (possibilities for gb,r and g,b,r)
+    -> '': 2
+'''
 
-    return building_blocks, target
+import importlib
+day_19_01 = importlib.import_module('a-19-01')
 
 def print_possibilities(possibilities) -> None:
     print(','.join(['_'.join(p) for p in possibilities]))
 
-
-
-def find_all_possibilities_for_blocks(building_blocks: list[str], target: str) -> int:
-    ''' this function uses sets in which each item is a tuple of the structure:
-        (building_block, building_block, ..., rest of string)
-    '''
+def make_possibilities_tree(building_blocks: list[str], target: str) -> int:
     if target == '': return 0
-    test_sequences = {(target,)}
-    possibilities: set = set()
-    while len(test_sequences) > 0:
-        test_sequence_tuple = test_sequences.pop()
-        test_sequence = test_sequence_tuple[-1]
-        if test_sequence in building_blocks:
-            possibilities.add(test_sequence_tuple)
-        for building_block in building_blocks:
-            if test_sequence == building_block:
-                continue
-            if test_sequence.startswith(building_block):
-                new_tuple = (*(test_sequence_tuple[:-1]), building_block, test_sequence[len(building_block):])
-                test_sequences.add(new_tuple)
+    data_dict = reduce_string(building_blocks, target)
+    if len(data_dict) == 0: return 0
+    while any(key != '' for key in data_dict):
+        test_rest = list(data_dict.keys())[0]
+        if test_rest == '': # don't pop the empty string!
+            test_rest = list(data_dict.keys())[1]
+        n_possibilities = data_dict.pop(test_rest)
+        test_dict = reduce_string(building_blocks, test_rest)
+        if len(test_dict) == 0: continue # no possibilities!
+        for k,v in test_dict.items():
+            if k in data_dict:
+                data_dict[k] += n_possibilities
+            else:
+                data_dict[k] = n_possibilities
 
-    return len(possibilities)
+    if len(data_dict) == 0: return 0
+    return data_dict['']
 
-def make_possibilities_dictionary(building_blocks: list[str]) -> dict[str,int]:
-    possibilities_dictionary = {}
+def reduce_string(building_blocks: list[str], target: str) -> None:
+    len_max = max([len(b) for b in building_blocks])
+    building_blocks_dict = {i: [] for i in range(1,len_max+1)} # TODO: move this to a smarter place (instead of re-computing it all the time)
     for b in building_blocks:
-        possibilities_dictionary[b] = find_all_possibilities_for_blocks(building_blocks, b)
-    return possibilities_dictionary
+        building_blocks_dict[len(b)].append(b)
 
-
-def find_all_possibilities_for_target(building_blocks: list[str], target: str, possibilities_dictionary: dict[str,int]) -> int:
-    ''' this function uses sets in which each item is a tuple of the structure:
-        (building_block, building_block, ..., rest of string)
-    '''
-    # print('TTARGET', target)
-    if target == '': return 0
-    if target in possibilities_dictionary:
-        # print('FOUND')
-        return possibilities_dictionary[target]
-    # jelse:
-    #     return 0
-
-    # if target[-1] in possibilities_dictionary:
-    #     return find_all_possibilities_for_target(building_blocks, target[:-1], possibilities_dictionary)
-
-
-    possibilities = 0
-    for pivot_index in range(1,len(target)):
-        # print('SEQ', target[:pivot_index], target[pivot_index:])
-        if pivot_index > 1 and target[pivot_index] in possibilities_dictionary:
-            continue
-        a = find_all_possibilities_for_target(building_blocks, target[:pivot_index], possibilities_dictionary)
-
-        if a == 0:
-            continue
-
-        b = find_all_possibilities_for_target(building_blocks, target[pivot_index:], possibilities_dictionary)
-
-        # print('tar', target)
-        possibilities += a*b
-
-
-    return possibilities
+    data_dict = {}
+    for i in range(1,min(len_max,len(target))+1):
+        test_string = target[:i]
+        rest_string = target[i:]
+        # print('LEN REST', rest_string, len(rest_string))
+        for b in building_blocks_dict[i]:
+            if b != test_string:
+                continue
+            print(b,test_string)
+            if rest_string in data_dict:
+                data_dict[rest_string] += 1
+            else:
+                data_dict[rest_string] = 1
+        print(data_dict)
+    return data_dict
 
 def count_possibilities(building_blocks: list[str], targets: list[str]) -> int:
     counter = 0
     for target in targets:
-        counter += find_all_possibilities_for_target(building_blocks, target, possibilities_dictionary)
-        break
+        print('TAR', target)
+        n_poss = make_possibilities_tree(building_blocks, target)
+        print(target,n_poss)
+        counter += n_poss
+        print('COUTNER', counter)
     return counter
 
 if __name__ == '__main__':
-    # input_filename = 'z-19-01-input.txt'
-    input_filename = 'z-19-02-actual-example.txt'
-    building_blocks, targets = read_data(input_filename)
-    possibilities_dictionary = make_possibilities_dictionary(building_blocks)
-    print(possibilities_dictionary)
-    # exit()
-    # print(building_blocks)
-    # print(build_from_blocks(building_blocks, 'brwrr'))
-    # print(count_possibilities(building_blocks, targets))
-    print(find_all_possibilities_for_target(building_blocks, 'w', possibilities_dictionary))
-    print(find_all_possibilities_for_target(building_blocks, 'rr', possibilities_dictionary))
-    print(find_all_possibilities_for_target(building_blocks, 'wr', possibilities_dictionary))
-    print(find_all_possibilities_for_target(building_blocks, 'r', possibilities_dictionary))
-    print('FINAL', find_all_possibilities_for_target(building_blocks, 'wrr', possibilities_dictionary))
-    # print('FINAL', find_all_possibilities_for_target(building_blocks, 'rwrr', possibilities_dictionary))
-    # print('FINAL', find_all_possibilities_for_target(building_blocks, 'rwrr', possibilities_dictionary))
-    # print('FINAL', find_all_possibilities_for_target(building_blocks, 'rw', possibilities_dictionary))
-    print('FINAL', find_all_possibilities_for_target(building_blocks, 'brwrr', possibilities_dictionary))
-    for test in ['b', 'rwrr', 'br', 'wrr', 'brw', 'rr', 'brwr', 'r']:
-        print(test, '====', find_all_possibilities_for_target(building_blocks, test, possibilities_dictionary))
+    input_filename = 'z-19-01-input.txt'
+    # input_filename = 'z-19-02-actual-example.txt'
+    building_blocks, targets = day_19_01.read_data(input_filename)
+    print(building_blocks)
+    # make_possibilities_tree(building_blocks, targets[0])
+    counter = count_possibilities(building_blocks, targets)
+    print(counter)
 
